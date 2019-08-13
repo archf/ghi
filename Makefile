@@ -1,5 +1,5 @@
-BIN = ~/bin/git-hooks
-SUCCESS_MSG = "All done! Make sure '~/bin' is in your PATH"
+# This script needs to be placed in the sudoers 'secure_path'
+BIN = /usr/local/bin/ghi
 
 .PHONY: install update uninstall
 
@@ -10,7 +10,6 @@ install: $(BIN)
 
 $(BIN):
 	ln -s $(CURDIR)/$(@F) $@
-	@echo $(SUCCESS_MSG)
 
 uninstall:
 	rm -f $(BIN)

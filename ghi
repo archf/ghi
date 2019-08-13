@@ -1,0 +1,172 @@
+#!/bin/bash
+
+set -o errexit
+set -u
+
+__doc__="\
+GHI
+  A custom git command to install software from a github release.
+  See https://github.com/archf/git-pkg.
+
+Limitations
+Using the 'latest' release will only work if the release is not tagged as a
+'draft' or 'prerelease'.
+
+USAGE
+  ghi [OPTIONS] CMD [PATTERN]
+
+OPTIONS
+  -h|--help       Show this help menu.
+  -t|--tag        Output latest release 'tag_name' and exit.
+  -r|--repository Set Github repository in the '<user|org>/<repository_name>'
+                  Defaults to use .git/config file.
+                  setting in your project directory.
+  --assets-dir    Directory where to download archives. Defaults to '~/.ghi'.
+                  This allows for easy removal of installed software.
+  -p|--prefix     Directory where to unpack a tar archive typically containing
+                  a binary executable. Defaults to '/usr/local/bin' when this
+                  script is ran in priviledged mode, '~/bin' otherwise.
+  -v|--verbose
+
+CMD
+  install     Install/unpack software from downloadable assets.
+  search      Search for assets
+  help        Show this help menu.
+"
+
+function _help() { echo "${__doc__:-No usage available}" 1>&2; }
+
+# Alternate simpler logging system.
+verbose() { if [ -n "${VERBOSE:-}" ]; then printf "%s\n" "$*" 1>&2; fi; }
+echoerr() { echo "$@" 1>&2; }
+
+die_with_status () {
+	local status=$1
+  shift; printf >&2 '%s\n' "$*"; exit "$status"
+}
+
+die() { die_with_status 1 "$@"; }
+
+function _repo_exists() {
+  if [[ "$(curl --silent -L https://api.github.com/repos/${__repository} \
+    | jq --raw-output '.["message"]?')" == "Not Found" ]]; then
+    die "Repository 'https://github.com/${__repository}' not found on Github"
+  fi
+}
+
+function _search() {
+  _repo_exists
+  # show tag of latest release
+  if [[ ${__tag:-} ]]; then
+    curl --silent "https://api.github.com/repos/${__repository}/releases/latest" | jq -r '.["tag_name"]'
+    return
+  fi
+
+  # TODO: search assets by tag as well
+  curl --silent "https://api.github.com/repos/${__repository}/releases/latest" \
+    | jq --raw-output --arg ASSET_PATTERN ${__pattern:-".*"} \
+    '.["assets"][] | select(.["name"]|test($ASSET_PATTERN)) | .["browser_download_url"]'
+}
+
+# function _mkdir() {
+#   local var=${1}
+#   local path=${!var:-$2}
+#   if [ -z ${!var:-} ]; then
+#     echoerr "Option '${var}' undefined, using default directory '${path}'"
+#   fi
+#   mkdir -p ${path}
+# }
+
+function _install() {
+  # this was placed as a function here because calling 'exit 1' from the
+  # '_search' function would only exit the subshell and the script would then
+  # failed later throwing a misleading error message.
+  _repo_exists
+  local asset_url=$(_search)
+  verbose "'asset_url': ${asset_url:-}"
+
+  if [ $(wc --words <<< ${asset_url}) -gt 1 ]; then
+    die "Error: too many possible assets to download. Current matches are:
+${asset_url}
+Consider using a more specific asset filtering PATTERN than '${__pattern:-".*"}'."
+
+  elif [ $(wc --words <<< ${asset_url}) -eq 0 ]; then
+    die "Error: no asset found. Is asset filtering PATTERN '${__pattern:-}' ok?"
+  fi
+
+  echoerr "Installing ${asset_url} from repository '${__repository}'"
+
+  install --verbose --directory ${GHI_ASSETS_DIR}
+  local asset_path=${GHI_ASSETS_DIR}/${asset_url##*/}
+  if [ -f ${GHI_ASSETS_DIR}/${asset_url##*/} ]; then
+    echoerr "Asset already downloaded '${asset_path}'!"
+  else
+    echoerr "Downloading asset to '${asset_path}'"
+    curl --silent --location --output ${asset_path} ${asset_url}
+  fi
+
+  #FIXME: handle file vs directory tarball; tarbarll must be downloaded to
+  # assets-dir to allow inspection without downloading twice.
+  case ${asset_url} in
+    *.txz) _extract_tar --xz;;
+    *.gz) _extract_tar --gzip;;
+    *.deb)
+      # debian archives offers no way to install from remote URL as far as I am
+      # aware of. Thus we must download archive to disk
+      echoerr "Installing Debian archive: '${asset_path}'"
+      apt install ${asset_path}
+      ;;
+  esac
+}
+
+function _extract_tar() {
+  local tar_filter=$1
+  echo ${asset_path}
+  install --verbose --directory ${GHI_INSTALL_PREFIX}
+  tar --verbose --extract --files ${asset_path} ${tar_filter} --directory ${GHI_INSTALL_PREFIX}
+}
+
+while [ $# -gt 0 ]; do
+  case $1 in
+    install|search|remove) cmd=$1;;
+    -v|--verbose) VERBOSE=true;;
+    -h|--help|help) _help; exit 0;;
+    -n|--dry-run) DRY_RUN=true;;
+    -t|--tag) __tag=true;;
+    -r|--repository) shift; __repository=$1;;
+    -p|--prefix) shift; GHI_INSTALL_PREFIX=$1;;
+    --assets-dir) shift; GHI_ASSETS_DIR=$1;;
+    --) shift; break;;
+    *) __pattern=${1:-};;
+    # *) die "Invalid positional argument: '$1'";;
+  esac
+  shift
+done
+__extra_args=$@
+
+# if script is ran with privileded rights
+if [ $(id --user) -eq 0 ]; then
+  GHI_INSTALL_PREFIX=${GHI_INSTALL_PREFIX:-/usr/local}
+else
+  GHI_INSTALL_PREFIX=${GHI_INSTALL_PREFIX:-~/}
+fi
+GHI_ASSETS_DIR=${GHI_ASSETS_DIR:-~/.ghi}
+
+if [[ -z "${__repository:-}" ]]; then
+  echoerr "No repositories specified, defaulting to current project repository."
+  __repository=$(git remote get-url origin)
+  __repository=${__repository##git@github.com:}
+  __repository=${__repository%%.git}
+fi
+
+# verbose "'DRY_RUN': ${DRY_RUN:-}"
+# verbose "'FORCE': ${FORCE:-}"
+verbose "'GHI_ASSETS_DIR': ${GHI_ASSETS_DIR:-}"
+verbose "'GHI_INSTALL_PREFIX': ${GHI_INSTALL_PREFIX}"
+verbose "'cmd': ${cmd:-}"
+verbose "'__repository': ${__repository}"
+verbose "'__pattern': ${__pattern:-".*"}"
+# verbose "'__tag': ${__tag:-}"
+verbose "'__extra_args': '${__extra_args}'"
+
+_$cmd $@
