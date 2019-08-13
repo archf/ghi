@@ -10,13 +10,11 @@ Clone this repository somewhere and put this script in your PATH.
 git clone git@github.com:archf/ghi.git
 ```
 
-Personally I like to install those kind of scripts in
-`~/bin` whilst `~/bin` is in your PATH.
-
-Quickly add a symlink in `~/bin`:
+This script needs to be placed in the sudoers 'secure_path'. Quickly create
+that symlink in `/usr/local/bin`:
 
 ```bash
-make install
+sudo make install
 ```
 
 ## Usage
@@ -118,8 +116,8 @@ v1.6.0
 ## Other tools worth mentioning
 
 This is inpired heavily from [ghr](https://github.com/tcnksm/ghr), a tool doing
-the reverse operation, i.e: create GitHub Release and uploads artifacts in
-parallel
+the reverse operation, i.e: create a GitHub Release and upload artifacts in
+parallel.
 
 Other notable tools:
 - [hub](https://github.com/github/hub) - a git wrapper that makes git easier to use with GitHub
