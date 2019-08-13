@@ -94,12 +94,12 @@ Consider using a more specific asset filtering PATTERN than '${__pattern:-".*"}'
     die "Error: no asset found. Is asset filtering PATTERN '${__pattern:-}' ok?"
   fi
 
-  echoerr "Installing ${asset_url} from repository '${__repository}'"
+  echoerr "Installing ${asset_url} from repository 'https://github.com/${__repository}'"
 
   install --verbose --directory ${GHI_ASSETS_DIR}
   local asset_path=${GHI_ASSETS_DIR}/${asset_url##*/}
   if [ -f ${GHI_ASSETS_DIR}/${asset_url##*/} ]; then
-    echoerr "Asset already downloaded '${asset_path}'!"
+    echoerr "Asset already downloaded: '${asset_path}'!"
   else
     echoerr "Downloading asset to '${asset_path}'"
     curl --silent --location --output ${asset_path} ${asset_url}
@@ -114,7 +114,7 @@ Consider using a more specific asset filtering PATTERN than '${__pattern:-".*"}'
       # debian archives offers no way to install from remote URL as far as I am
       # aware of. Thus we must download archive to disk
       echoerr "Installing Debian archive: '${asset_path}'"
-      apt install ${asset_path}
+      apt install -y ${asset_path}
       ;;
   esac
 }
@@ -123,7 +123,7 @@ function _extract_tar() {
   local tar_filter=$1
   echo ${asset_path}
   install --verbose --directory ${GHI_INSTALL_PREFIX}
-  tar --verbose --extract --files ${asset_path} ${tar_filter} --directory ${GHI_INSTALL_PREFIX}
+  tar --verbose --extract --file ${asset_path} ${tar_filter} --directory ${GHI_INSTALL_PREFIX}
 }
 
 while [ $# -gt 0 ]; do
@@ -169,4 +169,4 @@ verbose "'__pattern': ${__pattern:-".*"}"
 # verbose "'__tag': ${__tag:-}"
 verbose "'__extra_args': '${__extra_args}'"
 
-_$cmd $@
+_${cmd:-help} $@
