@@ -28,7 +28,6 @@ Limitations
 Using the 'latest' release will only work if the release is not tagged as a
 'draft' or 'prerelease'.
 
-if [ -n "$ZSH_VERSION" ]; then
 USAGE
   ghi [OPTIONS] CMD [PATTERN]
 
