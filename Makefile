@@ -9,7 +9,7 @@ update:
 install: $(BIN)
 
 $(BIN):
-	ln -s $(CURDIR)/$(@F) $@
+	ln -s --force $(CURDIR)/$(@F) $@
 
 uninstall:
 	rm -f $(BIN)
