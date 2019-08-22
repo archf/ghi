@@ -22,10 +22,12 @@ OPTIONS
                   Defaults to use .git/config file.
                   setting in your project directory.
   --assets-dir    Directory where to download archives. Defaults to '~/.ghi'.
-                  This allows for easy removal of installed software.
-  -p|--prefix     Directory where to unpack a tar archive typically containing
-                  a binary executable. Defaults to '/usr/local/bin' when this
-                  script is ran in priviledged mode, '~/bin' otherwise.
+                  This allows for later easy removal of installed software.
+  -p|--prefix     Directory where to unpack a tar archive. Defaults to
+                  '/usr/local' when this script is ran in priviledged mode,
+                  '~/' otherwise.  If the tar contains a standalone binary
+                  executable one would tipically set this to
+                  '/usr/local/bin' or '~/bin'.
   -v|--verbose
 
 CMD
@@ -67,15 +69,6 @@ function _search() {
     | jq --raw-output --arg ASSET_PATTERN ${__pattern:-".*"} \
     '.["assets"][] | select(.["name"]|test($ASSET_PATTERN)) | .["browser_download_url"]'
 }
-
-# function _mkdir() {
-#   local var=${1}
-#   local path=${!var:-$2}
-#   if [ -z ${!var:-} ]; then
-#     echoerr "Option '${var}' undefined, using default directory '${path}'"
-#   fi
-#   mkdir -p ${path}
-# }
 
 function _install() {
   # this was placed as a function here because calling 'exit 1' from the
@@ -138,7 +131,6 @@ while [ $# -gt 0 ]; do
     --assets-dir) shift; GHI_ASSETS_DIR=$1;;
     --) shift; break;;
     *) __pattern=${1:-};;
-    # *) die "Invalid positional argument: '$1'";;
   esac
   shift
 done

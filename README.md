@@ -10,16 +10,26 @@ Clone this repository somewhere and put this script in your PATH.
 git clone git@github.com:archf/ghi.git
 ```
 
-This script needs to be placed in the sudoers 'secure_path'. Quickly create
-that symlink in `/usr/local/bin`:
+This script needs to be placed in the sudoers 'secure_path' to allow for
+priviledged mode execution and thus installation of archives (`.deb`)
+and/or unpacking of tarballs in some paths.
+
+Quickly create that symlink in `/usr/local/bin`:
 
 ```bash
 sudo make install
 ```
 
+## Uninstallation
+
+```bash
+sudo make uninstall
+```
+
 ## Usage
 
 ```
+No repositories specified, defaulting to current project repository.
 GHI
   A custom git command to install software from a github release.
   See https://github.com/archf/git-pkg.
@@ -38,10 +48,12 @@ OPTIONS
                   Defaults to use .git/config file.
                   setting in your project directory.
   --assets-dir    Directory where to download archives. Defaults to '~/.ghi'.
-                  This allows for easy removal of installed software.
-  -p|--prefix     Directory where to unpack a tar archive typically containing
-                  a binary executable. Defaults to '/usr/local/bin' when this
-                  script is ran in priviledged mode, '~/bin' otherwise.
+                  This allows for later easy removal of installed software.
+  -p|--prefix     Directory where to unpack a tar archive. Defaults to
+                  '/usr/local' when this script is ran in priviledged mode,
+                  '~/' otherwise.  If the tar contains a standalone binary
+                  executable one would tipically set this to
+                  '/usr/local/bin' or '~/bin'.
   -v|--verbose
 
 CMD
@@ -109,8 +121,8 @@ v1.6.0
 
 - choosing a release other than latest
 - handle tarbals containing a directory and/or multiple files
+- add a show command to list content of downloaded archives
 - handle rpms
-- fix help menu
 
 ## Other tools worth mentioning
 
