@@ -17,6 +17,8 @@ USAGE
 
 OPTIONS
   -h|--help       Show this help menu.
+  -V|--version    Show version
+  -v|--verbose
   -t|--tag        Output latest release 'tag_name' and exit.
   -r|--repository Set Github repository in the '<user|org>/<repository_name>'
                   Defaults to use .git/config file.
@@ -28,7 +30,6 @@ OPTIONS
                   '~/' otherwise.  If the tar contains a standalone binary
                   executable one would tipically set this to
                   '/usr/local/bin' or '~/bin'.
-  -v|--verbose
 
 CMD
   install     Install/unpack software from downloadable assets.
@@ -36,6 +37,26 @@ CMD
   help        Show this help menu.
 "
 
+# handling cases where $0 is bash|sh. E.g.: when sourcing.
+if [ -f "${0}" ]; then
+  __file__=$(readlink --no-newline --canonicalize-existing "${0}")
+fi
+
+if [ ! -f "${0}" -a -f "${1:-}" ]; then
+  __file__=$(readlink -o-no-newline --canonicalize-existing "${1}")
+fi
+
+if [ -n "${__file__:-}" ]; then
+  __name__="${__file__##*/}"
+  __path__=${__file__%/*} || true
+  if [ -r ${__path__}/VERSION ]; then
+    __version__=$(< "${__path__}/VERSION")
+  else
+    __version__=
+  fi
+fi
+
+_version() { echo "${__version__:-No version string available}" 1>&2; }
 function _help() { echo "${__doc__:-No usage available}" 1>&2; }
 
 # Alternate simpler logging system.
@@ -123,6 +144,7 @@ while [ $# -gt 0 ]; do
   case $1 in
     install|search|remove) cmd=$1;;
     -v|--verbose) VERBOSE=true;;
+    -V|--version) _version; exit 0;;
     -h|--help|help) _help; exit 0;;
     -n|--dry-run) DRY_RUN=true;;
     -t|--tag) __tag=true;;
