@@ -6,7 +6,7 @@ set -u
 __doc__="\
 GHI
   A custom git command to install software from a github release.
-  See https://github.com/archf/git-pkg.
+  See https://github.com/archf/ghi
 
 Limitations
 Using the 'latest' release will only work if the release is not tagged as a
